@@ -1,56 +1,62 @@
-const formidable = require('formidable');
-const path = require('path');
-const fs = require('fs');
-const util = require('util');
-const rename = util.promisify(fs.rename);
-const unlink = util.promisify(fs.unlink);
-const productsCtrl = require('../controllers/products');
-const validation = require('../libs/adminproduct-valid');
+const skillsCtrl = require('./skills');
+const productsCtrl = require('./products');
 
-module.exports.adminProduct = req => new Promise(async (resolve, reject) => {
+module.exports.admin = async (req, res) => {
+  let msg, msgType;
+  
   try {
-    const form = new formidable.IncomingForm();
-    const upload = path.join('./public', 'upload');
-    
-    if (!fs.existsSync('./public/upload')) {
-      fs.mkdirSync('./public/upload');
+    if (res.locals.flash.length) {
+      msgType = res.locals.flash[0].type;
+      msg = (msgType === 'msgfile' || msgType === 'msgskill') ? res.locals.flash[0].message : '';
+      res.locals.flash.length = 0;
     }
-
-    form.uploadDir = path.join(process.cwd(), upload);
+    console.log('msgType, msg', { [msgType]: msg });
     
-    form.parse(req, async (err, fields, files) => {
-      if (err) {
-        reject(err);
-      }
-
-      const { name, price } = fields;
-      const { name: photoName, size, path: photoPath } = files.photo;
-  
-      const validError = validation(name, price, photoName, size);
-  
-      if (validError) {
-        await unlink(photoPath);
-        resolve({success: false, message: validError.message});
-        return;
-      }
-      
-      const fileName = path.join(process.cwd(), 'public', 'upload', name);
-      const errUpload = await rename(photoPath, fileName);
-
-      if (errUpload) {
-        console.log(photoPath, fileName);
-        resolve({success: false, message: `При загрузке картинки произошла ошибка!: ${err}`});
-        return;
-      }
-
-      const result = await productsCtrl.addProduct(name, price, path.join('upload', name));
-      if (result.success) {
-        resolve(result);
-      } else {
-        throw new Error('admin-product-form error');
-      }
+    res.render('admin', {
+      [msgType]: msg
     });
+    if (req.session.isAdmin) {
+      res.render('admin', {
+        [msgType]: msg
+      });
+    } else {
+      res.redirect('/login');
+    }
   } catch (err) {
-    reject(err);
+    console.error('admin-render error', err);
+    res.render('login');
   }
-});
+};
+
+module.exports.changeIndexItems = async (req, res) => {
+  try {
+    switch (req.params.id) {
+      case 'upload':
+        const result = await productsCtrl.addProduct(req);
+      
+        if (result) {
+          req.flash('msgfile', result.message);
+          res.redirect('/admin');
+        } else {
+          throw new Error();
+        }
+        break;
+      case 'skills':
+        const resultSkill = await skillsCtrl.changeSkills(req.body);
+        
+        if (resultSkill) {
+          req.flash('msgskill', resultSkill.message);
+          res.redirect('/admin');
+        } else {
+          throw new Error();
+        }
+        break;
+      default:
+        console.error('admin-post error');
+        throw new Error();
+    }
+  } catch (err) {
+    console.error('admin-form error', err);
+    res.render('admin');
+  }
+};
