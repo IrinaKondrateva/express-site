@@ -5,7 +5,6 @@ const util = require('util');
 const rename = util.promisify(fs.rename);
 const unlink = util.promisify(fs.unlink);
 const productsCtrl = require('../controllers/products');
-const skillsCtrl = require('../controllers/skills');
 const validation = require('../libs/adminproduct-valid');
 
 module.exports.adminProduct = req => new Promise(async (resolve, reject) => {

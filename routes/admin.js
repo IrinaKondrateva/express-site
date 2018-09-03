@@ -1,17 +1,26 @@
 const express = require('express');
 const router = express.Router();
 const adminCtrl = require('../controllers/admin');
+const skillsCtrl = require('../controllers/skills');
 
 router.get('/', async (req, res) => {
   let msg;
-  
+  let msgType;
+  console.log(req.url, res.locals.flash);
+
   if (res.locals.flash.length) {
-    msg = res.locals.flash[0].type === 'msgfile' ? res.locals.flash[0].message : '';
+    msgType = res.locals.flash[0].type;
+    msg = (msgType === 'msgfile' || msgType === 'msgskill') ? res.locals.flash[0].message : '';
     res.locals.flash.length = 0;
   }
-  res.render('admin', {
-    msgfile: msg
-  });
+  console.log(msgType, msg);
+  if (req.session.isAdmin) {
+    res.render('admin', {
+      [msgType]: msg
+    });
+  } else {
+    res.redirect('/login');
+  }
 });
 
 router.post('/:id', async (req, res) => {
@@ -23,15 +32,22 @@ router.post('/:id', async (req, res) => {
         if (result) {
           req.flash('msgfile', result.message);
           res.redirect('/admin');
+          return;
         } else {
-          throw new Error('admin-product-form error');
+          throw new Error();
         }
-        break;
       case 'skills':
-        await skillsCtrl.addSkill(req);
-        res.redirect('/');
-        break;
+        const resultSkill = await skillsCtrl.changeSkills(req.body);
+        
+        if (resultSkill) {
+          req.flash('msgskill', resultSkill.message);
+          res.redirect('/admin');
+          return;
+        } else {
+          throw new Error();
+        }
       default:
+        console.log('ошибочка');
         throw new Error();
     }
   } catch (err) {

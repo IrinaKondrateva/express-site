@@ -19,6 +19,7 @@ router.post('/', async (req, res) => {
     const result = await loginCtrl.login(req.body);
 
     if (result && result.success) {
+      req.session.isAdmin = true;
       res.redirect('admin');
       return;
     } else if (result && !result.success) {
