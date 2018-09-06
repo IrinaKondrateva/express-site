@@ -11,10 +11,8 @@ module.exports.admin = async (req, res) => {
       res.locals.flash.length = 0;
     }
     console.log('msgType, msg', { [msgType]: msg });
+    console.log(req.session.isAdmin);
     
-    res.render('admin', {
-      [msgType]: msg
-    });
     if (req.session.isAdmin) {
       res.render('admin', {
         [msgType]: msg
@@ -30,8 +28,9 @@ module.exports.admin = async (req, res) => {
 
 module.exports.changeIndexItems = async (req, res) => {
   try {
-    switch (req.params.id) {
-      case 'upload':
+    console.log(req.originalUrl);
+    switch (req.originalUrl) {
+      case '/admin/upload':
         const result = await productsCtrl.addProduct(req);
       
         if (result) {
@@ -41,7 +40,7 @@ module.exports.changeIndexItems = async (req, res) => {
           throw new Error();
         }
         break;
-      case 'skills':
+      case '/admin/skills':
         const resultSkill = await skillsCtrl.changeSkills(req.body);
         
         if (resultSkill) {

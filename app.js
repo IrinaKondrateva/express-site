@@ -5,6 +5,7 @@ const logger = require('morgan');
 const session = require('express-session');
 const flash = require('flash');
 const app = express();
+const config = require('./config');
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views/pages'));
@@ -13,17 +14,7 @@ app.set('view engine', 'pug');
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(session({
-  secret: 'secret',
-  key: 'sessionkey',
-  cookie: {
-    path: '/',
-    httpOnly: true,
-    maxAge: 600000
-  },
-  saveUninitialized: false,
-  resave: false
-}));
+app.use(session(config.session));
 app.use(flash());
 
 app.use(express.static(path.join(__dirname, 'public')));
