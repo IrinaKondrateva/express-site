@@ -1,40 +1,20 @@
-const loginValidCtrl = require('../libs/login-valid');
+const db = require('../models/db.js');
+const psw = require('../libs/password.js');
 
-module.exports.login = async (req, res) => {
-  let msg, msgType;
-
+module.exports.login = ({ email, password }) => new Promise(async (resolve, reject) => {
   try {
-    if (res.locals.flash.length) {
-      msgType = res.locals.flash[0].type;
-      msg = msgType === 'msgslogin' ? res.locals.flash[0].message : '';
-      res.locals.flash.length = 0;
+    const user = db.getState().user;
+
+    if (!email || !password) {
+      resolve({success: false, message: 'Все поля нужно заполнить!'});
+      return;
     }
-    res.render('login', {
-      [msgType]: msg
-    });
-  } catch (err) {
-    console.error('login-render error', err);
-    res.render('login');
-  }
-};
-
-module.exports.auth = async (req, res) => {
-  try {
-    const result = await loginValidCtrl.loginValid(req.body);
-
-    if (result && result.success) {
-      req.session.isAdmin = true;
-
-      return res.redirect('/admin');
-    } else if (result && !result.success) {
-      req.flash('msgslogin', result.message);
-
-      return res.redirect('/login');
-    } else {
-      throw new Error();
+    if (email !== user.loginEmail || !(await psw.validPassword(password))) {
+      resolve({success: false, message: 'Неверный пароль или почта'});
+      return;
     }
+    resolve({success: true, message: 'Осуществлен вход'});
   } catch (err) {
-    console.error('login-form error', err);
-    res.render('login');
+    reject(err);
   }
-};
+});

@@ -3,8 +3,8 @@ const formidable = require('formidable');
 const path = require('path');
 const fs = require('fs');
 const util = require('util');
-const rename = util.promisify(fs.rename);
 const unlink = util.promisify(fs.unlink);
+const rename = util.promisify(fs.rename);
 const validation = require('../libs/adminproduct-valid');
 
 module.exports.getProducts = () => new Promise(async (resolve, reject) => {
@@ -27,7 +27,7 @@ module.exports.addProduct = req => new Promise(async (resolve, reject) => {
 
     form.uploadDir = path.join(process.cwd(), upload);
     
-    form.parse(req, async (err, fields, files) => {
+    const parseResult = await form.parse(req, (err, fields, files) => new Promise(async (resolve, reject) => {
       if (err) {
         reject(err);
       }
@@ -40,28 +40,30 @@ module.exports.addProduct = req => new Promise(async (resolve, reject) => {
     
         if (validError) {
           await unlink(photoPath);
-          resolve({success: false, message: validError.message});
-          return;
+          return resolve({success: false, message: validError.message});
         }
         
-        const fileName = path.join(process.cwd(), 'public', 'upload', name);
+        const fileName = path.join(process.cwd(), 'public', 'upload', photoName);
+        
         const errUpload = await rename(photoPath, fileName);
+        console.log('photoPath', photoPath, fileName);
 
         if (errUpload) {
-          resolve({success: false, message: `При загрузке картинки произошла ошибка!: ${err}`});
-          return;
+          console.log(errUpload);
+          return resolve({success: false, message: `При загрузке картинки произошла ошибка!: ${errUpload}`});
         }
 
-        const result = await addProductToDb(name, price, path.join('upload', name));
+        const result = await addProductToDb(name, price, path.join('upload', photoName));
         if (result.success) {
           resolve(result);
         } else {
           throw new Error('product-adding error');
         }
       } catch (err) {
-        throw err;
+        reject(err);
       }
-    });
+    }));
+    resolve(parseResult);
   } catch (err) {
     reject(err);
   }

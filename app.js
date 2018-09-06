@@ -19,9 +19,10 @@ app.use(flash());
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', require('./routes/index'));
-app.use('/login', require('./routes/login'));
-app.use('/admin', require('./routes/admin'));
+app
+  .use('/', require('./routes/index'))
+  .use('/login', require('./routes/login'))
+  .use('/admin', require('./routes/admin'));
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {
